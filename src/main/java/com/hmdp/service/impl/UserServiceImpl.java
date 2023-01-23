@@ -36,8 +36,12 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
 
+    private final StringRedisTemplate redisTemplate;
+
     @Autowired
-    private StringRedisTemplate redisTemplate;
+    public UserServiceImpl(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     @Override
     public Result sendCode(String phone, HttpSession session) {
