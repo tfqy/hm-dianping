@@ -35,7 +35,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     public static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
 
     private final StringRedisTemplate redisTemplate;
-    private CacheClient cacheClient;
+    private final CacheClient cacheClient;
 
     @Autowired
     public ShopServiceImpl(StringRedisTemplate redisTemplate, CacheClient cacheClient) {
