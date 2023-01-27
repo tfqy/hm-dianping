@@ -8,8 +8,11 @@ import com.hmdp.mapper.VoucherOrderMapper;
 import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherOrderService;
 import com.hmdp.utils.RedisIdWorker;
+import com.hmdp.utils.SimpleRedisLock;
 import com.hmdp.utils.UserHolder;
 import org.springframework.aop.framework.AopContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,12 +30,14 @@ import java.time.LocalDateTime;
 public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, VoucherOrder> implements IVoucherOrderService {
 
     private final ISeckillVoucherService seckillVoucherService;
-
     private final RedisIdWorker redisIdWorker;
+    private final StringRedisTemplate redisTemplate;
 
-    public VoucherOrderServiceImpl(SeckillVoucherServiceImpl seckillVoucherService, RedisIdWorker redisIdWorker) {
+    @Autowired
+    public VoucherOrderServiceImpl(ISeckillVoucherService seckillVoucherService, RedisIdWorker redisIdWorker, StringRedisTemplate redisTemplate) {
         this.seckillVoucherService = seckillVoucherService;
         this.redisIdWorker = redisIdWorker;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -55,13 +60,26 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return Result.fail("库存不足！");
         }
         Long userId = UserHolder.getUser().getId();
-        //对用户id加锁，保证一人一单
-        synchronized (userId.toString().intern()) {
+//        //对用户id加锁，保证一人一单
+//        synchronized (userId.toString().intern()) {
+//            // 获取代理对象（因为在代理对象中开启了事务，所以要获取代理对象）
+//            IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
+//            return proxy.createVoucherOrder(voucherId);
+//        }
+
+        // 使用redis分布式锁
+        SimpleRedisLock lock = new SimpleRedisLock("order:" + userId, redisTemplate);
+        boolean isLock = lock.tryLock(1200);
+        if (!isLock) {
+            return Result.fail("请勿重复提交！");
+        }
+        try {
             // 获取代理对象（因为在代理对象中开启了事务，所以要获取代理对象）
             IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
             return proxy.createVoucherOrder(voucherId);
+        } finally {
+            lock.unlock();
         }
-
     }
 
     @Transactional
@@ -77,7 +95,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         }
         //6.扣减库存
         boolean success = seckillVoucherService.update()
-                //                .set(true, "stock", voucher.getStock() - 1)   //如果使用这个方法，会出现并发问题，因为这个方法是先查询再更新，会导致更新的时候库存已经被别人更新了
+//                .set(true, "stock", voucher.getStock() - 1)   //如果使用这个方法，会出现并发问题，因为这个方法是先查询再更新，会导致更新的时候库存已经被别人更新了
                 .setSql("stock = stock -1") //这个方法是直接执行sql语句，不会出现并发问题，但是这个方法不会判断库存是否为0，所以需要在下面判断库存是否为0
                 .eq("voucher_id", voucherId)
                 .gt("stock", 0)
