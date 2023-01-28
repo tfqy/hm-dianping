@@ -7,9 +7,11 @@ import com.hmdp.entity.VoucherOrder;
 import com.hmdp.mapper.VoucherOrderMapper;
 import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherOrderService;
+import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.RedisIdWorker;
-import com.hmdp.utils.SimpleRedisLock;
 import com.hmdp.utils.UserHolder;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -32,12 +34,14 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private final ISeckillVoucherService seckillVoucherService;
     private final RedisIdWorker redisIdWorker;
     private final StringRedisTemplate redisTemplate;
+    private final RedissonClient redissonClient;
 
     @Autowired
-    public VoucherOrderServiceImpl(ISeckillVoucherService seckillVoucherService, RedisIdWorker redisIdWorker, StringRedisTemplate redisTemplate) {
+    public VoucherOrderServiceImpl(ISeckillVoucherService seckillVoucherService, RedissonClient redissonClient, RedisIdWorker redisIdWorker, StringRedisTemplate redisTemplate) {
         this.seckillVoucherService = seckillVoucherService;
         this.redisIdWorker = redisIdWorker;
         this.redisTemplate = redisTemplate;
+        this.redissonClient = redissonClient;
     }
 
     @Override
@@ -68,8 +72,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 //        }
 
         // 使用redis分布式锁
-        SimpleRedisLock lock = new SimpleRedisLock("order:" + userId, redisTemplate);
-        boolean isLock = lock.tryLock(1200);
+//        SimpleRedisLock lock = new SimpleRedisLock("order:" + userId, redisTemplate);
+        RLock lock = redissonClient.getLock(RedisConstants.LOCK_ORDER_KEY + userId);
+        boolean isLock = lock.tryLock();
         if (!isLock) {
             return Result.fail("请勿重复提交！");
         }
