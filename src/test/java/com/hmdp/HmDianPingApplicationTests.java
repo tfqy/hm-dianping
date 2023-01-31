@@ -5,6 +5,7 @@ import com.hmdp.utils.RedisIdWorker;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.Resource;
@@ -41,5 +42,12 @@ public class HmDianPingApplicationTests {
         latch.await();
         long end = System.currentTimeMillis();
         System.out.println("耗时：" + (end - begin));
+    }
+
+    @Test
+    public void testPath() throws InterruptedException {
+        ClassPathResource classPathResource = new ClassPathResource("img");
+        String path = classPathResource.getPath();
+        System.out.println(path);
     }
 }
