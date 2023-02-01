@@ -2,7 +2,6 @@ package com.hmdp.interceptor;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.http.HttpStatus;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.UserHolder;
