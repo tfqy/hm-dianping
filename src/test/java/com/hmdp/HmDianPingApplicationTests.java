@@ -80,4 +80,21 @@ public class HmDianPingApplicationTests {
             stringRedisTemplate.opsForGeo().add(key, locations);
         }
     }
+
+    @Test
+    public void testHyperLogLog() {
+        String[] users = new String[1000];
+        int j;
+        for (int i = 0; i < 1000000; i++) {
+            j = i % 1000;
+            users[j] = "user_" + i;
+            if (j == 999) {
+                // 每1000个用户，统计一次, 1000个用户的去重后的数量
+                stringRedisTemplate.opsForHyperLogLog().add("HLL", users);
+            }
+        }
+        // 统计总的去重后的数量, 1000000个用户的去重后的数量, 与上面的结果相同, 说明没有重复的, 也就是去重了, 但是实际上是有重复的, 但是误差很小
+        Long count = stringRedisTemplate.opsForHyperLogLog().size("HLL");
+        System.out.println("count = " + count);
+    }
 }
