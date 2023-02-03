@@ -93,7 +93,7 @@ public class HmDianPingApplicationTests {
                 stringRedisTemplate.opsForHyperLogLog().add("HLL", users);
             }
         }
-        // 统计总的去重后的数量, 1000000个用户的去重后的数量, 与上面的结果相同, 说明没有重复的, 也就是去重了, 但是实际上是有重复的, 但是误差很小
+        // 统计总的去重后的数量, 与上面的结果相同, 说明没有重复的, 也就是去重了, 但是实际上是有重复的, 但是误差很小
         Long count = stringRedisTemplate.opsForHyperLogLog().size("HLL");
         System.out.println("count = " + count);
     }
